@@ -1,0 +1,30 @@
+unit ConsultarItensVendas;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB, Vcl.StdCtrls, Vcl.Buttons,
+  Vcl.ExtCtrls, Vcl.Grids, Vcl.DBGrids;
+
+type
+  TfrmConsultarItensVendas = class(TForm)
+    Label1: TLabel;
+    DBGrid1: TDBGrid;
+    Panel1: TPanel;
+    btnSair: TBitBtn;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+    pbcIDVenda: String;
+  end;
+
+var
+  frmConsultarItensVendas: TfrmConsultarItensVendas;
+
+implementation
+
+{$R *.dfm}
+
+end.

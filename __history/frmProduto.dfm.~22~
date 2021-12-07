@@ -1,0 +1,174 @@
+object frmProdutos: TfrmProdutos
+  Left = 0
+  Top = 0
+  Caption = 'Produtos'
+  ClientHeight = 424
+  ClientWidth = 808
+  Color = clCream
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Arial'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poScreenCenter
+  OnKeyDown = FormKeyDown
+  PixelsPerInch = 96
+  TextHeight = 14
+  object Label1: TLabel
+    Left = 8
+    Top = 5
+    Width = 72
+    Height = 22
+    Caption = 'Produto:'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label2: TLabel
+    Left = 8
+    Top = 384
+    Width = 102
+    Height = 22
+    Caption = 'Quantidade:'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object tbNome: TEdit
+    Left = 8
+    Top = 33
+    Width = 792
+    Height = 30
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 0
+    OnChange = tbNomeChange
+  end
+  object btnAdicionar: TBitBtn
+    Left = 266
+    Top = 377
+    Width = 168
+    Height = 39
+    Caption = '&Adicionar'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 3
+    OnClick = btnAdicionarClick
+  end
+  object GridProdutos: TDBGrid
+    Left = 8
+    Top = 69
+    Width = 792
+    Height = 302
+    DataSource = dmPrincipal.dsProduto
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 2
+    TitleFont.Charset = DEFAULT_CHARSET
+    TitleFont.Color = clWindowText
+    TitleFont.Height = -11
+    TitleFont.Name = 'Arial'
+    TitleFont.Style = []
+    Columns = <
+      item
+        Expanded = False
+        FieldName = 'NomeProduto'
+        Title.Alignment = taCenter
+        Title.Caption = 'Produto'
+        Title.Font.Charset = DEFAULT_CHARSET
+        Title.Font.Color = clWindowText
+        Title.Font.Height = -19
+        Title.Font.Name = 'Arial'
+        Title.Font.Style = [fsBold]
+        Width = 430
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'PrecoUnitario'
+        Title.Caption = 'Valor Unitario'
+        Title.Font.Charset = DEFAULT_CHARSET
+        Title.Font.Color = clWindowText
+        Title.Font.Height = -19
+        Title.Font.Name = 'Arial'
+        Title.Font.Style = []
+        Width = 150
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'DataAtualizacao'
+        Title.Alignment = taCenter
+        Title.Caption = 'Atualiza'#231#227'o'
+        Title.Font.Charset = DEFAULT_CHARSET
+        Title.Font.Color = clWindowText
+        Title.Font.Height = -19
+        Title.Font.Name = 'Arial'
+        Title.Font.Style = []
+        Width = 200
+        Visible = True
+      end>
+  end
+  object tbQuantidade: TEdit
+    Left = 116
+    Top = 381
+    Width = 137
+    Height = 30
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 1
+  end
+  object BitBtn1: TBitBtn
+    Left = 440
+    Top = 377
+    Width = 177
+    Height = 39
+    Caption = 'Cadastrar Produto'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 4
+    OnClick = BitBtn1Click
+  end
+  object btnSair: TBitBtn
+    Left = 623
+    Top = 377
+    Width = 177
+    Height = 39
+    Caption = 'Sair'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 5
+    OnClick = btnSairClick
+  end
+end

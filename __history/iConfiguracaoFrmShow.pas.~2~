@@ -1,0 +1,11 @@
+unit iConfiguracaoFrmShow;
+
+interface
+  type
+    IConfiguracoesShowfrmPrincipal = interface
+    ['{247EEA0D-8BAB-4568-A9BB-FEFDF9804BA3}']
+      function Iniciar(prmIDNovaVenda: Integer): Integer;
+    end;
+implementation
+
+end.

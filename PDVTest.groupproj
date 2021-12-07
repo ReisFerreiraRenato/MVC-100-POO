@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6F08673A-30D3-4F79-8DAA-7ABE324C2409}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="PDV.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Test\PDVTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="PDV">
+        <MSBuild Projects="PDV.dproj"/>
+    </Target>
+    <Target Name="PDV:Clean">
+        <MSBuild Projects="PDV.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PDV:Make">
+        <MSBuild Projects="PDV.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="PDVTests">
+        <MSBuild Projects="Test\PDVTests.dproj"/>
+    </Target>
+    <Target Name="PDVTests:Clean">
+        <MSBuild Projects="Test\PDVTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PDVTests:Make">
+        <MSBuild Projects="Test\PDVTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="PDV;PDVTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="PDV:Clean;PDVTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="PDV:Make;PDVTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

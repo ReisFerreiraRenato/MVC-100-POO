@@ -1,0 +1,195 @@
+unit frmCadastrarProduto;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Mask, Vcl.DBCtrls, untInterfaces,
+  Vcl.Buttons;
+
+type
+  TfrmCadastrarProdutos = class(TForm)
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    edNomeProduto: TEdit;
+    edValCompra: TEdit;
+    edCodBarras: TEdit;
+    btnNovo: TBitBtn;
+    btnCancelar: TBitBtn;
+    btnSalvar: TBitBtn;
+    btnSair: TBitBtn;
+    edDataCadastro: TMaskEdit;
+    edDataAtualizacao: TMaskEdit;
+    edPrecoUnitario: TMaskEdit;
+    procedure FormShow(Sender: TObject);
+    procedure StatusEdits(prmStatus: Boolean);
+    procedure btnSairClick(Sender: TObject);
+    procedure btnNovoClick(Sender: TObject);
+    procedure btnSalvarClick(Sender: TObject);
+    procedure edPrecoUnitarioExit(Sender: TObject);
+    procedure edValCompraExit(Sender: TObject);
+    procedure edCodBarrasExit(Sender: TObject);
+    procedure btnCancelarClick(Sender: TObject);
+    procedure LimparEdits();
+    procedure EnableBotoes(prmEnable: Boolean);
+  private
+    { Private declarations }
+    pvtProduto: IProduto;
+  public
+    { Public declarations }
+  end;
+
+var
+  frmCadastrarProdutos: TfrmCadastrarProdutos;
+
+implementation
+
+{$R *.dfm}
+
+uses frmDataModulo, Funcoes, untClasses;
+
+procedure TfrmCadastrarProdutos.StatusEdits(prmStatus: Boolean);
+begin
+  edNomeProduto.Enabled := prmStatus;
+  edPrecoUnitario.Enabled := prmStatus;
+  edValCompra.Enabled := prmStatus;
+  edCodBarras.Enabled := prmStatus;
+end;
+
+procedure TfrmCadastrarProdutos.btnSairClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TfrmCadastrarProdutos.btnSalvarClick(Sender: TObject);
+var
+  LocSalvarProduto: ISalvarNovoProduto;
+begin
+  LocSalvarProduto := TSalvarNovoProduto.Create();
+  //Testando Nome do Produto
+  if edNomeProduto.Text = '' then
+  begin
+    MessageDlg('Favor digitar o nome do produto!',mtConfirmation,[mbOK], 0);
+    edNomeProduto.SetFocus;
+    Exit;
+  end;
+
+  //Testando o valor de Compra
+  if edValCompra.Text = '' then
+  begin
+    MessageDlg('Favor digitar valor de compra!',mtConfirmation,[mbOK], 0);
+    edValCompra.SetFocus;
+    Exit;
+  end;
+
+  //Testando Preço Unitário
+  if edPrecoUnitario.Text = '' then
+  begin
+    MessageDlg('Favor digitar o preço!',mtConfirmation,[mbOK], 0);
+    edPrecoUnitario.SetFocus;
+    Exit;
+  end;
+
+  //Salvando o produto
+  if not LocSalvarProduto.Salvar(edNomeProduto.Text, edDataCadastro.text,
+           edDataAtualizacao.text, edPrecoUnitario.Text, edValCompra.Text,
+           edCodBarras.Text) then
+  begin
+    MessageDlg('Erro ao salvar novo produto!',mtConfirmation,[mbOK], 0);
+    edPrecoUnitario.SetFocus;
+    Exit;
+  end;
+
+  MessageDlg('Produto Salvo com Sucesso',mtConfirmation,[mbOK], 0);
+  StatusEdits(False);
+  LimparEdits();
+  EnableBotoes(true);
+  btnNovo.SetFocus();
+end;
+
+procedure TfrmCadastrarProdutos.btnCancelarClick(Sender: TObject);
+begin
+  StatusEdits(False);
+  LimparEdits();
+  btnCancelar.Enabled := False;
+  btnSalvar.Enabled := False;
+  btnNovo.Enabled := True;
+  btnNovo.SetFocus();
+end;
+
+procedure TfrmCadastrarProdutos.btnNovoClick(Sender: TObject);
+begin
+  StatusEdits(true);
+  EnableBotoes(false);
+  edDataCadastro.Text := DateToStr(date);
+  edDataAtualizacao.Text := DateToStr(date);
+  edNomeProduto.SetFocus();
+end;
+
+procedure TfrmCadastrarProdutos.edCodBarrasExit(Sender: TObject);
+begin
+  if not Assigned(pvtProduto) then
+    pvtProduto := TProduto.Create();
+  if pvtProduto.CodigoBarrasExiste(edCodBarras.Text) then
+  begin
+    MessageDlg('Código de barras cadastrado em outro produto!',mtConfirmation,[mbOK], 0);
+    edCodBarras.SetFocus;
+  end;
+end;
+
+procedure TfrmCadastrarProdutos.edPrecoUnitarioExit(Sender: TObject);
+var
+  LocValor: String;
+begin
+  if edPrecoUnitario.Text <> '' then
+  begin
+    if not IsDouble(edPrecoUnitario.Text) then
+    begin
+      MessageDlg('Favor digitar valor válido!',mtConfirmation,[mbOK], 0);
+      edPrecoUnitario.SetFocus();
+    end;
+  end;
+end;
+
+procedure TfrmCadastrarProdutos.edValCompraExit(Sender: TObject);
+begin
+  if edValCompra.Text <> '' then
+  begin
+    if not IsDouble(edValCompra.Text) then
+    begin
+      MessageDlg('Favor digitar valor válido!',mtConfirmation,[mbOK], 0);
+      edValCompra.SetFocus();
+    end;
+  end;
+end;
+
+procedure TfrmCadastrarProdutos.EnableBotoes(prmEnable: Boolean);
+begin
+  btnNovo.Enabled     := prmEnable;
+  btnCancelar.Enabled := not prmEnable;
+  btnSalvar.Enabled   := not prmEnable;
+end;
+
+procedure TfrmCadastrarProdutos.FormShow(Sender: TObject);
+begin
+  StatusEdits(False);
+end;
+
+procedure TfrmCadastrarProdutos.LimparEdits;
+begin
+  edNomeProduto.Clear();
+  edValCompra.Clear();
+  edCodBarras.Clear();
+  edDataCadastro.Clear();
+  edDataAtualizacao.Clear();
+  edPrecoUnitario.Clear();
+end;
+
+end.
+
+
+uses untInterfaces;

@@ -1,0 +1,430 @@
+unit Funcoes;
+
+interface
+
+uses SysUtils, Vcl.Forms, Data.DB, Vcl.Grids, Vcl.DBGrids, vcl.Dialogs;
+
+procedure AbrirCadastroProdutos();
+
+procedure AbrirBuscarProdutos(prmIDVenda: Integer);
+
+procedure AtualizaTotaisVenda(prmIdVenda: Integer);
+
+procedure BuscarClienteNome(prmNome: String);
+
+procedure BuscarProdutoNome(prmNome: String);
+
+procedure DimensionarGrid(dbg: TDBGrid);
+
+function AbrirBuscarProdutoNome(prmIDVenda: Integer; prmNome: String; prmQuantidade: Double): Integer;
+
+function AbrirClientes():Integer;
+
+function AdicionarProdutoPorCodBarras(prmCodBarras: String; prmIDVenda: Integer; prmQuantidade: Double): Boolean;
+
+function AdicionarProdutoPorID(prmIDProduto, prmIDVenda: Integer; prmQuantidade, prmValorUnitario: Double): Boolean;
+
+function CancelarVenda(var prmIDVenda: Integer): Boolean;
+
+function CodigoBarraExistente(prmCodigo: String): Boolean;
+
+function ConfiguracoesShowfrmPrincipal(prmIDNovaVenda: Integer): Integer;
+
+function FinalizarVenda(prmIDVenda: Integer): Boolean;
+
+function FormatarDataSQL(prmData: TDateTime):String;
+
+function IniciarNovaVenda(): Integer;
+
+function IsDouble(prmValor: String): Boolean;
+
+function VendaIniciada(var prmIDVendaIniciada: integer): Boolean;
+
+implementation
+
+uses frmDataModulo, IniFiles, frmCadastrarProduto, frmCliente, frmProduto;
+
+//Funcao para abrir cadastro de produtos
+procedure AbrirCadastroProdutos();
+begin
+  try
+    frmCadastrarProdutos := TfrmCadastrarProdutos.Create(nil);
+    frmCadastrarProdutos.ShowModal();
+  finally
+    FreeAndNil(frmCadastrarProdutos);
+  end;
+end;
+
+//Funcao para abrir a busca de produtos
+procedure AbrirBuscarProdutos(prmIDVenda: Integer);
+begin
+  try
+    frmProdutos:= TfrmProdutos.Create(nil);
+    frmProdutos.pbcIDVenda := prmIDVenda;
+    frmProdutos.ShowModal();
+  finally
+    FreeAndNil(frmProdutos);
+  end;
+end;
+
+//Funcao utilizada para arir a busca do produto qndo digitado o comeco do nome
+function AbrirBuscarProdutoNome(prmIDVenda: Integer; prmNome: String; prmQuantidade: Double): Integer;
+begin
+  try
+    frmProdutos                   := TfrmProdutos.Create(nil);
+    frmProdutos.pbcIDVenda        := prmIDVenda;
+    frmProdutos.tbNome.Text       := prmNome;
+    frmProdutos.tbQuantidade.Text := FloatToStr(prmQuantidade);
+    frmProdutos.ShowModal();
+    Result := frmProdutos.pbcIDVenda;
+  finally
+    FreeAndNil(frmProdutos);
+  end;
+end;
+
+//Funcao para abrir o frmCliente
+function AbrirClientes():Integer;
+begin
+  try
+    frmClientes:= TfrmClientes.Create(nil);
+    frmClientes.ShowModal();
+  finally
+    FreeAndNil(frmClientes);
+  end;
+end;
+
+procedure AtualizaTotaisVenda(prmIdVenda: Integer);
+var
+  LocScript: String;
+begin
+  try
+    LocScript := 'SELECT COUNT(ID) Quantidade, SUM(ValorTotalItem) ValorTotal FROM ItemVenda where IDVenda = ' + IntToStr(prmIdVenda) + ' GROUP BY IDVENDA';
+    dmprincipal.qrUtilidade.Close();
+    dmprincipal.qrUtilidade.SQL.Text := LocScript;
+    dmprincipal.qrUtilidade.Open();
+    LocScript := 'UPDATE `venda` SET `DataVenda`='+ QuotedStr(FormatarDataSQL(Date)) +
+      ',`ValorTotal`='+ FormatFloat('#0.00', dmprincipal.qrUtilidade.FieldByName('ValorTotal').AsFloat).Replace(',','.')+
+      ',`QuantidadeItens`='+dmprincipal.qrUtilidade.FieldByName('Quantidade').AsString +
+      ' WHERE `ID`='+ IntToStr(prmIdVenda);
+    dmprincipal.qrUtilidade.Close();
+    dmprincipal.qrUtilidade.SQL.Text := LocScript;
+    dmprincipal.qrUtilidade.ExecSQL();
+
+    if dmprincipal.qrUtilidade.RowsAffected > 0 then
+    begin
+      dmPrincipal.qrVenda.Close();
+      dmPrincipal.qrVenda.ParamByName('prmID').AsInteger := prmIdVenda;
+      dmPrincipal.qrVenda.Open();
+      dmPrincipal.qrItemVenda.Open();
+    end;
+  except
+
+  end;
+end;
+
+function AdicionarProdutoPorCodBarras(prmCodBarras: String; prmIDVenda: Integer; prmQuantidade: Double): Boolean;
+var
+  LocScript: String;
+begin
+  try
+    Result := False;
+    //Buscando o produto pelo codigo de barras
+    LocScript := 'SELECT * FROM Produto WHERE CodBarras = ' + prmCodBarras;
+    dmPrincipal.qrProduto.Close();
+    dmPrincipal.qrProduto.SQL.Clear();
+    dmPrincipal.qrProduto.SQL.Text := LocScript;
+    dmPrincipal.qrProduto.Open();
+
+    //Se o produto não foi encontrado, sai da função
+    if dmPrincipal.qrProduto.FieldByName('ID').AsInteger = 0 then
+      Exit();
+
+    Result := AdicionarProdutoPorID(dmPrincipal.qrProduto.FieldByName('ID').AsInteger,prmIDVenda,prmQuantidade, dmPrincipal.qrProduto.FieldByName('PrecoUnitario').AsInteger);
+  Except on Exception do
+    raise Exception.Create('Erro ao adicionar Produto por código de barras');
+  end;
+end;
+
+function AdicionarProdutoPorID(prmIDProduto, prmIDVenda: Integer; prmQuantidade, prmValorUnitario: Double): Boolean;
+begin
+  Result := False;
+
+  if not dmPrincipal.qrItemVenda.Active then
+  begin
+    dmPrincipal.qrItemVenda.ParamByName('IDVenda').AsInteger := prmIDVenda;
+    dmPrincipal.qrItemVenda.Open();
+  end;
+
+  try
+    dmPrincipal.qrItemVenda.Insert();
+    dmPrincipal.qrItemVenda.FieldByName('IDVenda').AsInteger      := prmIDVenda;
+    dmPrincipal.qrItemVenda.FieldByName('IDProduto').AsInteger    := prmIDProduto;
+    dmPrincipal.qrItemVenda.FieldByName('Quantidade').AsFloat     := prmQuantidade;
+    dmPrincipal.qrItemVenda.FieldByName('ValorUnitario').AsFloat  := prmValorUnitario;
+    dmPrincipal.qrItemVenda.FieldByName('ValorTotalItem').AsFloat := strtofloat(formatfloat('#0.00', prmQuantidade * dmPrincipal.qrProduto.FieldByName('PrecoUnitario').AsFloat));
+    dmPrincipal.qrItemVenda.Post();
+    dmPrincipal.qrItemVenda.Close();
+    dmPrincipal.qrItemVenda.ParamByName('IDVenda').AsInteger := prmIDVenda;
+    dmPrincipal.qrItemVenda.Open();
+    dmPrincipal.qrItemVenda.Last();
+    AtualizaTotaisVenda(prmIDVenda);
+    Result := true;
+  except on Exception do
+    raise Exception.Create('Erro ao adicionar produto por ID');
+  end;
+end;
+
+//Buscar Cliente pelo nome
+procedure BuscarClienteNome(prmNome: String);
+var
+  LocScript: String;
+begin
+  try
+    dmPrincipal.qrCliente.Close;
+
+    LocScript := 'SELECT * FROM `Cliente` WHERE `Nome` LIKE '+ QuotedStr(prmNome+'%') +'ORDER BY Nome' ;
+
+    dmPrincipal.qrCliente.Sql.Clear();
+    dmPrincipal.qrCliente.SQL.Text := LocScript;
+    dmPrincipal.qrCliente.Open();
+  Except on Exception do
+    raise Exception.Create('Erro ao buscar cliente por nome');
+  end;
+end;
+
+//Buscar o produto pelo nome
+procedure BuscarProdutoNome(prmNome: String);
+var
+  LocScript: String;
+begin
+  try
+    dmPrincipal.qrProduto.Close;
+
+    LocScript := 'SELECT * FROM `Produto` WHERE `NomeProduto` LIKE '+ QuotedStr(prmNome+'%') +'ORDER BY NomeProduto' ;
+
+    dmPrincipal.qrProduto.Sql.Clear();
+    dmPrincipal.qrProduto.SQL.Text := LocScript;
+    dmPrincipal.qrProduto.Open();
+  Except on Exception do
+    raise Exception.Create('Erro ao buscar produto por nome');
+  end;
+end;
+
+//Funcao para finalizar a venda
+function FinalizarVenda(prmIDVenda: Integer): Boolean;
+var
+  LocScript: String;
+begin
+  result := False;
+
+  LocScript := 'UPDATE `venda` SET `DataVenda`='+ QuotedStr(FormatarDataSQL(Date)) +
+      ',`StatusVenda`= 2 '+
+      ',`DataEntrega`='+ QuotedStr(FormatarDataSQL(Date+10)) +
+      ' WHERE `ID`='+ IntToStr(prmIdVenda);
+
+  dmPrincipal.qrUtilidade.Close();
+  dmPrincipal.qrUtilidade.SQL.Clear();
+  dmPrincipal.qrUtilidade.SQL.Text := LocScript;
+  dmPrincipal.qrUtilidade.ExecSQL();
+
+  if dmPrincipal.qrUtilidade.RowsAffected > 0 then
+  begin
+    dmPrincipal.qrVenda.Close();
+    dmPrincipal.qrVenda.ParamByName('prmID').AsInteger := prmIDVenda;
+    dmPrincipal.qrVenda.Open();
+  end;
+  MessageDlg('Previsão de Entega: '+ dmPrincipal.qrVenda.FieldByName('DataEntrega').AsString ,mtConfirmation,[mbOK], 0);
+  dmPrincipal.qrVenda.Close();
+  dmPrincipal.qrItemVenda.Close();
+  dmPrincipal.qrProduto.Close();
+  dmPrincipal.qrProduto.Close();
+  result := True;
+end;
+
+//Configurações iniciais do formPrincipal
+function ConfiguracoesShowfrmPrincipal(prmIDNovaVenda: Integer): Integer;
+var LocIDNovaVenda: Integer;
+begin
+  LocIDNovaVenda := prmIDNovaVenda;
+  //Fechando as qrys
+  dmPrincipal.qrVenda.Close();
+  dmPrincipal.qrCliente.Close();
+  dmPrincipal.qrItemVenda.Close();
+  //Verificando se tem venda iniciada
+  if VendaIniciada(LocIDNovaVenda) then
+  begin
+    dmPrincipal.qrVenda.Params.ParamByName('prmID').AsInteger     := LocIDNovaVenda;
+    dmPrincipal.qrVenda.Open();
+    dmPrincipal.qrItemVenda.Params.ParamByName('IDVenda').AsInteger := LocIDNovaVenda;
+    dmPrincipal.qrItemVenda.Open();
+    AtualizaTotaisVenda(LocIDNovaVenda);
+    //if dmPrincipal.qrVenda.FieldByName('IDCliente').AsInteger <> 0 then
+      //dmPrincipal.qrCliente.Params.ParamByName('prmID').AsInteger := dmPrincipal.qrVenda.FieldByName('IDCliente').AsInteger;
+  end;
+  Result := LocIDNovaVenda;
+end;
+
+function FormatarDataSQL(prmData: TDateTime):String;
+begin
+  Result := DateTimeToStr(prmData);
+  Result := Result[7]+Result[8]+Result[9]+Result[10]+'-'+Result[4]+Result[5]+'-'+Result[1]+Result[2];
+end;
+
+//Dimensionar a grid
+procedure DimensionarGrid(dbg: TDBGrid);
+type
+  TArray = Array of Integer;
+  procedure AjustarColumns(Swidth, TSize: Integer; Asize: TArray);
+  var
+    idx: Integer;
+  begin
+    if TSize = 0 then
+    begin
+      TSize := dbg.Columns.count;
+      for idx := 0 to dbg.Columns.count - 1 do
+        dbg.Columns[idx].Width := (dbg.Width - dbg.Canvas.TextWidth('AAAAAA')
+          ) div TSize
+    end
+    else
+      for idx := 0 to dbg.Columns.count - 1 do
+        dbg.Columns[idx].Width := dbg.Columns[idx].Width +
+          (Swidth * Asize[idx] div TSize);
+  end;
+
+var
+  idx, Twidth, TSize, Swidth: Integer;
+  AWidth: TArray;
+  Asize: TArray;
+  NomeColuna: String;
+begin
+  SetLength(AWidth, dbg.Columns.count);
+  SetLength(Asize, dbg.Columns.count);
+  Twidth := 0;
+  TSize := 0;
+  for idx := 0 to dbg.Columns.count - 1 do
+  begin
+    NomeColuna := dbg.Columns[idx].Title.Caption;
+    dbg.Columns[idx].Width := dbg.Canvas.TextWidth
+      (dbg.Columns[idx].Title.Caption + 'A');
+    AWidth[idx] := dbg.Columns[idx].Width;
+    Twidth := Twidth + AWidth[idx];
+
+    if Assigned(dbg.Columns[idx].Field) then
+      Asize[idx] := dbg.Columns[idx].Field.Size
+    else
+      Asize[idx] := dbg.Columns[idx].Width;
+
+    TSize := TSize + Asize[idx];
+  end;
+  if TDBGridOption.dgColLines in dbg.Options then
+    Twidth := Twidth + dbg.Columns.count;
+
+  // adiciona a largura da coluna indicada do cursor
+  if TDBGridOption.dgIndicator in dbg.Options then
+    Twidth := Twidth + IndicatorWidth;
+
+  Swidth := dbg.ClientWidth - Twidth;
+  AjustarColumns(Swidth, TSize, Asize);
+end;
+
+//funcao que cancela a venda
+function CancelarVenda(var prmIDVenda: Integer): Boolean;
+var
+  LocArquivoINI: TIniFile;
+begin
+  Result:= false;
+  try
+    dmPrincipal.qrVenda.Close;
+    dmPrincipal.qrVenda.Params.ParamByName('prmID').AsInteger := prmIDVenda;
+    dmPrincipal.qrVenda.Open();
+    dmPrincipal.qrVenda.Edit();
+    dmPrincipal.qrVenda.FieldByName('StatusVenda').AsInteger := 3; //Status venda cancelada
+    dmPrincipal.qrVenda.Post();
+    dmPrincipal.qrVenda.Close;
+    dmPrincipal.qrItemVenda.Close();
+    prmIDVenda := 0;
+    Result := true;
+  except on Exception do
+    raise Exception.Create('Error Ao Cadastrar Produto!');
+  end;
+end;
+
+//Verifica se o código de barras já existe
+function CodigoBarraExistente(prmCodigo: String): Boolean;
+var
+  LocScript, LocScriptOriginal: String;
+begin
+  try
+    LocScript := 'SELECT NomeProduto FROM Produto WHERE CODBARRAS = ' + prmCodigo;
+
+    dmPrincipal.qrUtilidade.Close;
+    dmPrincipal.qrUtilidade.Sql.Clear;
+    dmPrincipal.qrUtilidade.SQl.Text:= LocScript;
+    dmPrincipal.qrUtilidade.Open;
+
+    result := dmPrincipal.qrUtilidade.FieldByName('NomeProduto').AsString <> '';
+  except on Exception do
+    raise Exception.Create('Erro ao consultar código de barras!');
+  end;
+end;
+
+//Funcao para iniciar uma nova venda
+function IniciarNovaVenda(): Integer;
+begin
+  try
+    dmPrincipal.qrVenda.Close();
+    //dmPrincipal.qrVenda.ParamByName('prmID').AsInteger:= -1;
+    dmPrincipal.qrVenda.Open();
+    dmPrincipal.qrVenda.Insert();
+    dmPrincipal.qrVenda.FieldByName('DataVenda').AsDateTime := date;
+    dmPrincipal.qrVenda.FieldByName('ValorTotal').AsFloat := 0;
+    dmPrincipal.qrVenda.FieldByName('QuantidadeItens').AsInteger := 0;
+    //Status Venda: 1 - Iniciada 2 - Finalizada 3 - Cancelada
+    dmPrincipal.qrVenda.FieldByName('StatusVenda').AsInteger := 1;
+    dmPrincipal.qrVenda.Post();
+
+    Result := dmPrincipal.qrVenda.FieldByName('ID').AsInteger;
+  except on Exception do
+    begin
+      Result := -1;
+      raise Exception.Create('Erro ao inicar venda');
+    end;
+  end;
+end;
+
+//Verifica se o valor passado é double
+function IsDouble(prmValor: String): Boolean;
+var 
+  locValor: String;
+begin
+  LocValor := prmValor;
+  LocValor := LocValor.Replace('.','');
+  try
+    StrToFloat(LocValor);
+    Result:= true;
+  except
+    Result:=false;
+  end;
+end;
+
+//Funcao para verificar se tem venda iniciada
+function VendaIniciada(var prmIDVendaIniciada: integer): Boolean;
+var
+  LocScript: String;
+begin
+  Result := False;
+  try
+    LocScript := 'SELECT ID FROM Venda WHERE StatusVenda = 1 AND DataVenda = '+ QuotedStr(FormatarDataSQL(Date))+' ORDER BY ID DESC';
+    dmPrincipal.qrUtilidade.Close();
+    dmPrincipal.qrUtilidade.SQL.Clear();
+    dmPrincipal.qrUtilidade.SQL.Text := LocScript;
+    dmPrincipal.qrUtilidade.Open();
+    prmIDVendaIniciada := dmPrincipal.qrUtilidade.FieldByName('ID').AsInteger;
+    if prmIDVendaIniciada <> 0 then
+      Result := True;
+  except on Exception do
+    raise Exception.Create('Erro ao verificar se a venda está iniciada');
+  end;
+end;
+
+end.
